@@ -1169,8 +1169,7 @@ class Binary(Node):
 
 
     def clone(self, path):
-
-        return Binary(path, self.sources, self.tk, self.cfg)
+        return self.__class__(path, self.sources, self.tk, self.cfg)
 
     @property
     def dynamic_libraries(self):
