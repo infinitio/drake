@@ -137,7 +137,6 @@ class Boost(drake.Configuration):
         test_windows = lib_path / ('lib%s.a' % (libname)) # Force .a on windows
         tests.append(test_windows)
       for test in  tests:
-        print(test)
         if test.exists():
           return libname
 
