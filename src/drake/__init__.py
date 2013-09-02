@@ -1228,6 +1228,7 @@ class Builder:
           cmd = (cmd,)
         with open(str(self.path_stdout), 'w') as f:
             def fun():
+                results = []
                 for c in cmd:
                     c = list(map(str, c))
                     if pretty is not None:
@@ -1235,7 +1236,8 @@ class Builder:
                     stdout = None
                     if not leave_stdout:
                         stdout = f
-                    return command(c, cwd = cwd, stdout = stdout)
+                    results.append(command(c, cwd = cwd, stdout = stdout))
+                return all(results)
             if _JOBS_LOCK is not None:
                 with _JOBS_LOCK:
                     return sched.background(fun)
