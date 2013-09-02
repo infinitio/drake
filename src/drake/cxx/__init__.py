@@ -584,10 +584,8 @@ class GccToolkit(Toolkit):
           extraflags + ['-c', str(src), '-o', str(obj)]
 
   def archive(self, cfg, objs, lib):
-      # FIXME: ;
-      return (['ar', 'crs', str(lib.path())] + \
-                  list(map(lambda n: str(n.path()), objs)),
-              ['ranlib', str(lib.path())])
+      return ['ar', 'crs', str(lib.path())] + \
+                [str(n.path()) for n in objs]
 
   def __libraries_flags(self, cfg, cmd):
     for lib in cfg.libs_dynamic:
