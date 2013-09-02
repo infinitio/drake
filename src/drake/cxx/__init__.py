@@ -490,17 +490,10 @@ def concatenate(chunks, prefix = ''):
 
 class GccToolkit(Toolkit):
 
-  def __init__(self, compiler = 'g++', compiler_c = 'gcc'):
+  def __init__(self, compiler = 'g++', compiler_c = 'gcc', os = drake.os.linux):
     Toolkit.__init__(self)
     self.arch = arch.x86
-    self.os = None
-    if sys.platform.startswith('linux'):
-      self.os = drake.os.linux
-    elif sys.platform.startswith('darwin'):
-      self.os = drake.os.macos
-    else:
-      raise Exception('unrecognized platform for a GCC toolkit: %s' % \
-                            sys.platform)
+    self.os = os
     try:
       version = drake.cmd_output([compiler, '--version'])
     except:
@@ -578,7 +571,7 @@ class GccToolkit(Toolkit):
 
   def ldflags(self, cfg):
       res = []
-      if cfg.export_dynamic and self.os is not drake.os.macos:
+      if cfg.export_dynamic and self.os not in (drake.os.macos, drake.os.windows):
           res.append('-rdynamic')
       return res
 
@@ -601,7 +594,7 @@ class GccToolkit(Toolkit):
       cmd.append('-l%s' % lib)
     # XXX Should refer to libraries with path on MacOS.
     if cfg.libs_static:
-      if self.os is not drake.os.macos:
+      if self.os not in (drake.os.macos, drake.os.windows):
         cmd.append('-Wl,-Bstatic')
         for lib in cfg.libs_static:
           cmd.append('-l%s' % lib)
@@ -611,14 +604,16 @@ class GccToolkit(Toolkit):
         # no-op on Lion.
         for lib in cfg.libs_static:
           found = False
-          for path in cfg.library_path:
-            libpath = path / ('lib%s.a' % lib)
-            if libpath.exists():
-              cmd.append(libpath)
-              found = True
-              break
+          paths = list(cfg.library_path)
+          for path in paths:
+            for name in ('lib%s.a' % lib, '%s.a' % lib, '%s.lib' % lib, 'lib%s.lib' % lib):
+              libpath = path / name
+              if libpath.exists():
+                cmd.append(libpath)
+                found = True
+                break
           if not found:
-            raise Exception('can\t find static version of %s' % lib)
+            raise Exception('can\'t find static version of %s' % lib)
 
 
   def link(self, cfg, objs, exe):
@@ -679,6 +674,8 @@ class GccToolkit(Toolkit):
           ext = 'so'
       elif self.os == drake.os.macos:
           ext = 'dylib'
+      elif self.os == drake.os.windows:
+          ext = 'dll'
       else:
           assert False
       return path.dirname() / ('lib%s.%s' % (path.basename(), ext))
@@ -689,8 +686,10 @@ class GccToolkit(Toolkit):
       return path.dirname() / ('%s.so' % str(path.basename()))
 
   def exename(self, cfg, path):
-
-      return Path(path)
+      path = Path(path)
+      if self.os == drake.os.windows:
+        path.extension = "exe"
+      return path
 
 
 class VisualToolkit(Toolkit):
@@ -945,6 +944,8 @@ class Compiler(Builder):
   def pic(self):
     def pic_rec(node):
       for consumer in node.consumers:
+        if sys.platform == 'win32' or sys.platform == 'gygwin':
+          return False
         if isinstance(consumer, DynLibLinker):
           return True
         elif isinstance(consumer, StaticLibLinker):
