@@ -517,6 +517,9 @@ class GccToolkit(Toolkit):
             (p.returncode, code, stderr))
     return stdout.decode("utf-8")
 
+  def enable_recursive_linkage(self, doit = True):
+      self.__recursive_linkage = doit
+
   def object_extension(self):
 
       return 'o'
@@ -542,8 +545,6 @@ class GccToolkit(Toolkit):
       res = []
       if cfg._Config__optimization:
           res.append('-O2')
-      if cfg._Config__debug:
-          res.append('-g')
       std = cfg._Config__standard
       if std is None:
           pass
@@ -588,6 +589,8 @@ class GccToolkit(Toolkit):
                 [str(n.path()) for n in objs]
 
   def __libraries_flags(self, cfg, cmd):
+    if self.__recursive_linkage:
+      cmd.append('-Wl,-(')
     for lib in cfg.libs_dynamic:
       cmd.append('-l%s' % lib)
     # XXX Should refer to libraries with path on MacOS.
@@ -612,6 +615,8 @@ class GccToolkit(Toolkit):
                 break
           if not found:
             raise Exception('can\'t find static version of %s' % lib)
+    if self.__recursive_linkage:
+      cmd.append('-Wl,-)')
 
 
   def link(self, cfg, objs, exe):
