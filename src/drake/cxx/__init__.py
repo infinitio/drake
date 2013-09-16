@@ -629,12 +629,7 @@ class GccToolkit(Toolkit):
           if self.os == drake.os.linux:
               cmd.append('-Wl,-rpath-link,%s' % path)
       for path in cfg._Config__rpath:
-          if not path.absolute():
-              if self.os is drake.os.macos:
-                  path = drake.Path('@loader_path') / path
-              else:
-                  path = drake.Path('$ORIGIN') / path
-          cmd.append('-Wl,-rpath,%s' % path)
+        cmd.append('-Wl,-rpath,%s' % self.rpath(path))
       if self.os == drake.os.macos:
           cmd += ['-undefined', 'dynamic_lookup']
       for obj in objs:
@@ -650,12 +645,7 @@ class GccToolkit(Toolkit):
       for path in cfg.library_path:
           cmd += ['-L', path]
       for path in cfg._Config__rpath:
-          if not path.absolute():
-              if self.os is drake.os.macos:
-                  path = drake.Path('@loader_path') / path
-              else:
-                  path = drake.Path('$ORIGIN') / path
-          cmd.append('-Wl,-rpath,%s' % path)
+        cmd.append('-Wl,-rpath,%s' % self.rpath(path))
       if self.os == drake.os.macos:
         cmd += ['-undefined', 'dynamic_lookup',
                 '-Wl,-install_name,@rpath/%s' % exe.path().basename(),
@@ -693,6 +683,16 @@ class GccToolkit(Toolkit):
       path = Path(path)
       if self.os == drake.os.windows:
         path.extension = "exe"
+      return path
+
+  def rpath(self, path):
+    path = drake.Path(path)
+    if not path.absolute():
+      if self.os is drake.os.macos:
+        return drake.Path('@loader_path') / path
+      else:
+        return drake.Path('$ORIGIN') / path
+    else:
       return path
 
 
