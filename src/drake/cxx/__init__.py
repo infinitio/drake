@@ -1231,11 +1231,15 @@ class Binary(Node):
 
 
 class DynLib(Binary):
-
+  # FIXME: If path and toolkit are given, deduce lib_name
   def __init__(self, path, sources = None, tk = None, cfg = None,
-               preserve_filename = False):
+               preserve_filename = False, lib_name = None):
     path = Path(path)
-    self.__lib_name = str(path.basename())
+    if tk is None:
+      assert lib_name is not None
+      self.__lib_name = lib_name
+    else:
+      self.__lib_name = str(path.basename())
     if not preserve_filename and tk is not None:
       path = tk.libname_dyn(cfg, path)
     Binary.__init__(self, path, sources, tk, cfg)
@@ -1245,7 +1249,7 @@ class DynLib(Binary):
   def clone(self, path):
     path = Path(path)
     res = DynLib(path, self.sources, self.tk, self.cfg,
-                 preserve_filename = True)
+                 preserve_filename = True, lib_name = self.lib_name)
     res.__lib_name = self.__lib_name
     return res
 
