@@ -495,6 +495,7 @@ class GccToolkit(Toolkit):
     Toolkit.__init__(self)
     self.arch = arch.x86
     self.os = os
+    self.__recursive_linkage = False
     try:
       version = drake.cmd_output([compiler, '--version'])
     except:
