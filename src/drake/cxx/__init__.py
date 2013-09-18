@@ -547,6 +547,8 @@ class GccToolkit(Toolkit):
       res = []
       if cfg._Config__optimization:
           res.append('-O2')
+      if cfg._Config__debug:
+          res.append('-g')
       std = cfg._Config__standard
       if std is None:
           pass
