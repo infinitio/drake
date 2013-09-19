@@ -491,7 +491,7 @@ def concatenate(chunks, prefix = ''):
 
 class GccToolkit(Toolkit):
 
-  def __init__(self, compiler = 'g++', compiler_c = 'gcc', os = drake.os.linux):
+  def __init__(self, compiler = 'g++', compiler_c = 'gcc', os = None):
     Toolkit.__init__(self)
     self.arch = arch.x86
     self.os = os
@@ -502,6 +502,12 @@ class GccToolkit(Toolkit):
       raise drake.Exception('Unable to find compiler: %s' % compiler)
     self.cxx = compiler
     self.c = compiler_c
+    if self.os is None:
+      osx = '__APPLE__'
+      if self.preprocess(osx).strip().split('\n')[-1] != osx:
+        self.os = drake.os.macos
+      else:
+        self.os = drake.os.linux
 
   def preprocess(self, code, config = Config()):
     cmd = [self.cxx]
