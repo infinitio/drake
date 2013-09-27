@@ -1311,8 +1311,9 @@ class Module(Binary):
 class StaticLib(Binary):
 
   def __init__(self, path, sources = None, tk = None, cfg = None):
-    Binary.__init__(self, tk.libname_static(cfg, path),
-                    sources, tk, cfg)
+    if tk is not None:
+      path = tk.libname_static(cfg, path)
+    Binary.__init__(self, path, sources, tk, cfg)
     if sources is not None:
       assert tk is not None
       assert cfg is not None
