@@ -1194,10 +1194,12 @@ class Binary(Node):
 
     def __init__(self, path, sources, tk, cfg):
 
-#         if len(args) == 0:
-#             Node.__init__(self, path)
-#             self.builder = None
-#             return
+        if sources is not None:
+          assert tk is not None
+          assert cfg is not None
+        else:
+          assert tk is None
+          assert cfg is None
 
         self.tk = tk
         self.cfg = cfg
@@ -1208,8 +1210,8 @@ class Binary(Node):
         self.__dynamic_libraries = []
 
         if sources is not None:
-            for source in sources:
-                self.src_add(source, self.tk, self.cfg)
+          for source in sources:
+            self.src_add(source, self.tk, self.cfg)
 
 
     def clone(self, path):
@@ -1303,10 +1305,13 @@ class Module(Binary):
 
 class StaticLib(Binary):
 
-  def __init__(self, path, sources, tk, cfg):
+  def __init__(self, path, sources = None, tk = None, cfg = None):
     Binary.__init__(self, tk.libname_static(cfg, path),
                     sources, tk, cfg)
-    StaticLibLinker(self.sources, self, self.tk, self.cfg)
+    if sources is not None:
+      assert tk is not None
+      assert cfg is not None
+      StaticLibLinker(self.sources, self, self.tk, self.cfg)
 
 
 class Executable(Binary):
