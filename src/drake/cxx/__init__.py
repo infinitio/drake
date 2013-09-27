@@ -1210,10 +1210,11 @@ class Binary(Node):
 
         Node.__init__(self, path)
 
-        self.sources = []
         self.__dynamic_libraries = []
 
+        self.sources = None
         if sources is not None:
+          self.sources = []
           for source in sources:
             self.src_add(source, self.tk, self.cfg)
 
