@@ -971,12 +971,12 @@ class DepFile:
         #   del self.__hashes[path]
         #   continue
         try:
-          h = node(path).hash()
+          n = node(path)
+          if not n.hash_compare(old_hash):
+            explain(self.__builder, '%s has changed' % path)
+            return False
         except:
           explain(self.__builder, '%s cannot be hashed' % path)
-          return False
-        if h != old_hash:
-          explain(self.__builder, '%s has changed' % path)
           return False
       return True
 
@@ -1135,6 +1135,9 @@ class BaseNode(object, metaclass = _BaseNodeType):
         """
         return None
 
+    def hash_compare(self, old):
+      return True
+
     def build(self):
         """Build this node.
 
@@ -1288,6 +1291,9 @@ class Node(BaseNode):
           hasher.update(dependency.hash())
         self.__hash = hasher.digest()
     return self.__hash
+
+  def hash_compare(self, old):
+    return self.hash() == old
 
   def clean(self):
         """Clean this node's file if it is generated, and recursively
