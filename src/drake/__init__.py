@@ -1133,7 +1133,7 @@ class BaseNode(object, metaclass = _BaseNodeType):
 
         It must be reimplemented by subclasses.
         """
-        raise Exception('hash must be implemented by BaseNodes')
+        return None
 
     def build(self):
         """Build this node.
@@ -1255,10 +1255,6 @@ class VirtualNode(BaseNode):
         path = drake.Drake.current.prefix / name
         path = drake.Path(path._Path__path, False, True)
         BaseNode.__init__(self, path)
-
-    def hash(self):
-        """Virtual node children must reimplement BaseNode.hash."""
-        raise Exception('hash must be implemented by VirtualNodes')
 
 
 class Node(BaseNode):
@@ -2856,10 +2852,6 @@ class Rule(VirtualNode):
             def __str__(self):
                 return 'RuleBuilder(%s)' % self._Builder__targets[0]
         RuleBuilder(nodes, [self])
-
-    def hash(self):
-        """Hash value."""
-        return ''
 
     def __lshift__(self, nodes):
         """Add a node to build when the rule is built."""
