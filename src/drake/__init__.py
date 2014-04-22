@@ -1053,8 +1053,8 @@ class _BaseNodeType(type, metaclass = _BaseNodeTypeType):
     try:
       return type.__call__(c, *args, **kwargs)
     except NodeRedefinition as e:
-      node = Drake.current.nodes.get(e.name(), None)
-      assert node is not None
+      assert e.name() in Drake.current.nodes
+      node = Drake.current.nodes[e.name()]
       if node.__class__ is not c:
         fmt = (node.__class__.__name__, node, c.__name__)
         raise Exception('%s %s redefined as a %s' % fmt)
@@ -1237,7 +1237,9 @@ class BaseNode(object, metaclass = _BaseNodeType):
 
     @builder.setter
     def builder(self, builder):
+      del Drake.current.nodes[self._BaseNode__name]
       self._builder = builder
+      Drake.current.nodes[self._BaseNode__name] = self
 
 class VirtualNode(BaseNode):
 
@@ -2796,8 +2798,8 @@ def __copy_stripped(source, to, strip_prefix, builder):
     path = (to / path).canonize()
     path_abs = drake.path_build(path)
     # Break install loops
-    res = drake.Drake.current.nodes.get(path_abs, None)
-    if res is not None:
+    if path_abs in drake.Drake.current.nodes:
+      res = drake.Drake.current.nodes[path_abs]
       if Copy._Copy__original(source) is res:
         return res
     res = builder(source, path).target()
