@@ -1288,14 +1288,14 @@ class Node(BaseNode):
     if self.__hash is None:
       with profile_hashing():
         hasher = hashlib.sha1()
-        for node in sorted(chain((self,), self.dependencies)):
-          path = node.path()
-          with open(str(path), 'rb') as f:
-            while True:
-              chunk = f.read(8192)
-              if not chunk:
-                break
-              hasher.update(chunk)
+        with open(str(self.path()), 'rb') as f:
+          while True:
+            chunk = f.read(8192)
+            if not chunk:
+              break
+            hasher.update(chunk)
+        for dependency in sorted(self.dependencies):
+          hasher.update(dependency.hash())
         self.__hash = hasher.digest()
     return self.__hash
 
@@ -1378,13 +1378,13 @@ class Node(BaseNode):
     else:
       debug.debug('Building %s.' % self, debug.DEBUG_TRACE)
       with debug.indentation():
+        for dep in self.dependencies:
+          dep.build()
         if self._builder is None:
           if self.missing():
             raise NoBuilder(self)
         else:
           self._builder.run()
-        for dep in self.dependencies:
-          dep.build()
         self.polish()
 
   def __repr__(self):
