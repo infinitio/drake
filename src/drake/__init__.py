@@ -1262,6 +1262,19 @@ class Node(BaseNode):
 
   """BaseNode representing a file."""
 
+  # Whether to use ctime or content hash.
+  hash_mode_ctime_ = os.environ.get('DRAKE_USE_CTIME', None) is not None
+
+  # Usage statistics
+  file_count_ = 0
+  file_size_ = 0
+
+  if os.environ.get('DRAKE_HASH_STATS', None) is not None:
+    import atexit
+    def printstats():
+      print("files: %s  size: %s" % (Node.file_count_, Node.file_size_))
+    atexit.register(printstats)
+
   def __init__(self, path):
     """Construct a Node with the given path."""
     path = drake.Drake.current.prefix / path
@@ -1279,12 +1292,21 @@ class Node(BaseNode):
     if self.__hash is None:
       with profile_hashing():
         hasher = hashlib.sha1()
-        with open(str(self.path()), 'rb') as f:
-          while True:
-            chunk = f.read(8192)
-            if not chunk:
-              break
-            hasher.update(chunk)
+        st = _OS.stat(str(self.path()))
+        Node.file_size_ += st.st_size
+        Node.file_count_ += 1
+        if Node.hash_mode_ctime_:
+          hasher.update(str(st.st_mtime).encode('ascii'))
+          hasher.update(str(st.st_ctime).encode('ascii'))
+          hasher.update(str(st.st_size).encode('ascii'))
+          hasher.update(str(st.st_ino).encode('ascii'))
+        else:
+          with open(str(self.path()), 'rb') as f:
+            while True:
+              chunk = f.read(8192)
+              if not chunk:
+                break
+              hasher.update(chunk)
         for dependency in sorted(self.dependencies):
           hasher.update(dependency.hash())
         self.__hash = hasher.digest()
