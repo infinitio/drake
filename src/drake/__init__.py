@@ -960,7 +960,7 @@ class DepFile:
       """Whether all registered files match the stored hash."""
       if self.__invalid:
         return False
-      for path, (old_hash, data) in self.__hashes.items():
+      for path, ((old_time, old_hash), data) in self.__hashes.items():
         if old_hash is None:
           continue
         # FIXME: needed ?
@@ -969,10 +969,11 @@ class DepFile:
         #   continue
         try:
           n = node(path)
-          if not n.hash_compare(old_hash):
+          if not n.compare(old_time, old_hash):
             explain(self.__builder, '%s has changed' % path)
             return False
-        except:
+        except Exception as e:
+          print(e)
           explain(self.__builder, '%s cannot be hashed' % path)
           return False
       return True
@@ -980,7 +981,7 @@ class DepFile:
     def update(self):
       """Rehash all files and write to the store file."""
       value = dict(
-        (node.name_absolute(), (node.hash() if source else None,
+        (node.name_absolute(), ((node.time(), node.hash()) if source else None,
                                 node.drake_type()))
         for node, source in self.__files)
       with profile_pickling():
@@ -1122,6 +1123,14 @@ class BaseNode(object, metaclass = _BaseNodeType):
         """Python representation."""
         return '%s(%s)' % (self.__class__.drake_type(), self.name())
 
+    def time(self):
+        """Time for this node
+
+        Used as first comparison step. Hash are only compared if
+        time do not match.
+        """
+        return None
+
     def hash(self):
         """Hash for this node.
 
@@ -1135,6 +1144,12 @@ class BaseNode(object, metaclass = _BaseNodeType):
 
     def hash_compare(self, old):
       return True
+
+    def time_compare(self, old):
+      return True
+
+    def compare(self, old_time, old_hash):
+      return self.time_compare(old_time) or self.hash_compare(old_hash)
 
     def build(self):
         """Build this node.
@@ -1262,9 +1277,6 @@ class Node(BaseNode):
 
   """BaseNode representing a file."""
 
-  # Whether to use ctime or content hash.
-  hash_mode_ctime_ = os.environ.get('DRAKE_USE_CTIME', None) is not None
-
   # Usage statistics
   file_count_ = 0
   file_size_ = 0
@@ -1281,11 +1293,26 @@ class Node(BaseNode):
     BaseNode.__init__(self, path)
     self.__dependencies = sched.OrderedSet()
     self.__hash = None
+    self.__time = None
     self.__exists = False
 
   def clone(self, path):
         """Clone of this node, with an other path."""
         return Node(path)
+
+  def time(self):
+    if self.__time is None:
+      with profile_hashing():
+        hasher = hashlib.sha1()
+        st = _OS.stat(str(self.path()))
+        hasher.update(str(st.st_mtime).encode('ascii'))
+        hasher.update(str(st.st_ctime).encode('ascii'))
+        hasher.update(str(st.st_size).encode('ascii'))
+        hasher.update(str(st.st_ino).encode('ascii'))
+        for dependency in sorted(self.dependencies):
+          hasher.update(dependency.time())
+        self.__time = hasher.digest()
+    return self.__time
 
   def hash(self):
     """Digest of the file as a string."""
@@ -1295,25 +1322,22 @@ class Node(BaseNode):
         st = _OS.stat(str(self.path()))
         Node.file_size_ += st.st_size
         Node.file_count_ += 1
-        if Node.hash_mode_ctime_:
-          hasher.update(str(st.st_mtime).encode('ascii'))
-          hasher.update(str(st.st_ctime).encode('ascii'))
-          hasher.update(str(st.st_size).encode('ascii'))
-          hasher.update(str(st.st_ino).encode('ascii'))
-        else:
-          with open(str(self.path()), 'rb') as f:
-            while True:
-              chunk = f.read(8192)
-              if not chunk:
-                break
-              hasher.update(chunk)
+        with open(str(self.path()), 'rb') as f:
+          while True:
+            chunk = f.read(8192)
+            if not chunk:
+              break
+            hasher.update(chunk)
         for dependency in sorted(self.dependencies):
           hasher.update(dependency.hash())
         self.__hash = hasher.digest()
     return self.__hash
 
-  def hash_compare(self, old):
-    return self.hash() == old
+  def hash_compare(self, old_hash):
+    return self.hash() == old_hash
+
+  def time_compare(self, old_time):
+    return self.time() == old_time
 
   def clean(self):
         """Clean this node's file if it is generated, and recursively
