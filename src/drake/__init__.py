@@ -2080,6 +2080,8 @@ class Builder:
             'drake.Builder',
             drake.log.LogLevel.dump,
             '%s: consider dependencies file %s', self, f):
+          if not isinstance(depfile.hashes, dict):
+            raise Exception("Expected dict for hashes, got %s (%s)" % (type(self.__hashes), self.__hashes))
           for path, (hash, data) in depfile.hashes.items():
             if path not in self.__sources and path not in self.__sources_dyn:
               node = handler(self, path, self.get_type(data), None)
