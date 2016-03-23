@@ -983,6 +983,8 @@ class DepFile:
           try:
             with open(str(self.path()), 'rb') as f:
               self.__hashes = drake.Path.Unpickler(f).load()
+              if not isinstance(self.__hashes, dict):
+                raise Exception("Expected dict for hashes, got %s (%s)" % (type(self.__hashes), self.__hashes))
               if self.__hashes is None:
                 self.__invalid = True
           except Exception:
